@@ -1,7 +1,10 @@
 package models;
 
 public class User {
-    private final String name;
+    private String name;
+
+    public User() {
+    }
 
     public User(final String name) {
         this.name = name;
@@ -9,5 +12,9 @@ public class User {
 
     public String getName() {
         return name;
+    }
+
+    public void setName(final String name) {
+        this.name = name;
     }
 }

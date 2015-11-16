@@ -1,8 +1,5 @@
 package models;
 
-import models.Cart;
-import models.User;
-
 public class PageData {
     private User user;
     private Cart cart;
