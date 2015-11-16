@@ -1,0 +1,10 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+# Home page
+GET        /                                               @controllers.ApplicationController.index(languageTag = "en")
+GET        /:languageTag                                   @controllers.ApplicationController.index(languageTag: String)
+
+# Map static resources from webjars to the /assets URL path
+GET        /assets/*file                                   controllers.WebJarAssets.at(file)
