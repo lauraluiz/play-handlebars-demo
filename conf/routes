@@ -3,8 +3,8 @@
 # ~~~~
 
 # Home page
-GET        /                                               @controllers.ApplicationController.index(languageTag = "en")
-GET        /:languageTag                                   @controllers.ApplicationController.index(languageTag: String)
+GET        /                                          @controllers.ApplicationController.index(languageTag = "en")
+GET        /$languageTag<[a-z]{2}(-[A-Z]{2})?>        @controllers.ApplicationController.index(languageTag: String)
 
 # Map static resources from webjars to the /assets URL path
-GET        /assets/*file                                   controllers.WebJarAssets.at(file)
+GET        /assets/$file<(css|img)/.*>                controllers.WebJarAssets.at(file)
