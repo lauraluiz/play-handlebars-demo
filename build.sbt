@@ -13,8 +13,8 @@ lazy val `play-handlebars-demo` = (project in file("."))
     resolvers ++= Seq (Resolver.mavenLocal),
     libraryDependencies ++= Seq (
       "com.lauraluiz" % "handlebars-webjars-demo" % "0.0.1-SNAPSHOT",
-      "org.webjars" % "webjars-play_2.10" % "2.4.0-1",
       "com.github.jknack" % "handlebars" % "2.2.3",
+      "org.webjars" % "webjars-play_2.10" % "2.4.0-1",
       "org.assertj" % "assertj-core" % "3.0.0" % "test"
     ),
     dependencyOverrides ++= Set (
