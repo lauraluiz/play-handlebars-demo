@@ -1,4 +1,4 @@
-package controllers;
+package handlebars;
 
 import com.github.jknack.handlebars.Helper;
 import com.github.jknack.handlebars.Options;
