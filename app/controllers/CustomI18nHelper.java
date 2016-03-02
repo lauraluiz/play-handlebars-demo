@@ -2,90 +2,81 @@ package controllers;
 
 import com.github.jknack.handlebars.Helper;
 import com.github.jknack.handlebars.Options;
+import i18n.I18nResolver;
 import org.apache.commons.lang3.StringUtils;
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.error.YAMLException;
-import play.Logger;
-import play.i18n.Lang;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.*;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 
-import static java.util.Collections.*;
+import static java.util.stream.Collectors.toList;
 
-public class CustomI18nHelper implements Helper<String> {
-    public static final String BUNDLE = "messages";
-    private final Map<String, Map<String, Object>> languageToFileContentMap = new HashMap<>();
+final class CustomI18nHelper implements Helper<String> {
+    private final I18nResolver i18n;
 
-    public CustomI18nHelper(final List<Lang> languages) {
-        languages.forEach(language -> {
-            final String path = generatePath(language.language());
-            try {
-                languageToFileContentMap.put(language.language(), loadFileContents(path));
-            } catch (IOException e) {
-                Logger.error("Failed loading i18n file " + path, e);
-            }
-        });
+    public CustomI18nHelper(final I18nResolver i18n) {
+        this.i18n = i18n;
     }
 
     @Override
     public CharSequence apply(final String context, final Options options) throws IOException {
-        final String language = options.context.get("locale").toString();
-        final String resolvedValue = resolve(language, context);
-        return replaceParameters(options, resolvedValue);
+        final List<Locale> locales = getLocales(options);
+        final I18nIdentifier i18nIdentifier = new I18nIdentifier(context);
+        final String message = resolveMessage(options, i18nIdentifier, locales);
+        return replaceParameters(options, message);
     }
 
-    private static String generatePath(final String languageTag) {
-        return "META-INF/resources/webjars/locales/" + languageTag + "/" + BUNDLE + ".yaml";
+    private String resolveMessage(final Options options, final I18nIdentifier i18nIdentifier, final List<Locale> locales) {
+        return resolvePluralMessage(options, i18nIdentifier, locales)
+                .orElseGet(() -> i18n.get(locales, i18nIdentifier.bundle, i18nIdentifier.key)
+                        .orElse(null));
     }
 
-    @Nullable
-    private String resolve(final String language, final String key) {
-        final Map<String, Object> fileContent = languageToFileContentMap.getOrDefault(language, emptyMap());
-        final String[] pathSegments = StringUtils.split(key, '.');
-        return resolve(fileContent, pathSegments, 0);
+    private Optional<String> resolvePluralMessage(final Options options, final I18nIdentifier i18nIdentifier, final List<Locale> locales) {
+        if (containsPlural(options)) {
+            final String pluralizedKey = i18nIdentifier.key + "_plural";
+            return i18n.get(locales, i18nIdentifier.bundle, pluralizedKey);
+        } else {
+            return Optional.empty();
+        }
     }
 
-    @SuppressWarnings("unchecked")
-    @Nullable
-    private static String resolve(final Map<String, Object> fileContent, final String[] pathSegments, final int index) {
-        return Optional.ofNullable(fileContent.get(pathSegments[index]))
-                .map(resolved -> {
-                    if (resolved instanceof String) {
-                        return (String) resolved;
-                    } else if (pathSegments.length == index) {
-                        return null;
-                    } else if (resolved instanceof Map) {
-                        return resolve((Map<String, Object>) resolved, pathSegments, index + 1);
-                    } else {
-                        return null;
-                    }
-                }).orElse(null);
+    private boolean containsPlural(final Options options) {
+        return options.hash.entrySet().stream()
+                .filter(entry -> entry.getKey().equals("count") && entry.getValue() instanceof Number)
+                .anyMatch(entry -> ((Number) entry.getValue()).doubleValue() != 1);
     }
 
     private String replaceParameters(final Options options, final String resolvedValue) {
-        String parametersReplaced = StringUtils.defaultString(resolvedValue);
+        String message = StringUtils.defaultString(resolvedValue);
         for (final Map.Entry<String, Object> entry : options.hash.entrySet()) {
             if (entry.getValue() != null) {
-                parametersReplaced = parametersReplaced.replace("__" + entry.getKey() + "__", entry.getValue().toString());
+                final String parameter = "__" + entry.getKey() + "__";
+                message = message.replace(parameter, entry.getValue().toString());
             }
         }
-        return parametersReplaced;
+        return message;
     }
 
     @SuppressWarnings("unchecked")
-    private static Map<String, Object> loadFileContents(final String path) throws IOException {
-        try {
-            final InputStream inputStream = getResourceAsStream(path);
-            return (Map<String, Object>) new Yaml().loadAs(inputStream, Map.class);
-        } catch (final YAMLException e) {
-            throw new IOException(e);
-        }
+    private static List<Locale> getLocales(final Options options) {
+        final List<String> languageTags = (List<String>) options.context.get("locales");
+        return languageTags.stream()
+                .map(Locale::forLanguageTag)
+                .collect(toList());
     }
 
-    private static InputStream getResourceAsStream(final String path) {
-        return Thread.currentThread().getContextClassLoader().getResourceAsStream(path);
+    private static class I18nIdentifier {
+        private final String key;
+        private final String bundle;
+
+        public I18nIdentifier(final String context) {
+            final String[] parts = StringUtils.split(context, ':');
+            final boolean usingDefaultBundle = parts.length == 1;
+            this.bundle = usingDefaultBundle ? "main" : parts[0];
+            this.key = usingDefaultBundle ? context : parts[1];
+        }
     }
 }

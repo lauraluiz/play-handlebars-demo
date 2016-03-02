@@ -1,0 +1,13 @@
+{{i18n "totalItems" count=@root.cart.totalItems}}
+{{#if lineItems}}
+    <ul>
+        {{#each lineItems}}
+            <li>
+                <img src="{{image}}"/>
+                <span>{{quantity}}</span> {{name}}
+            </li>
+        {{/each}}
+    </ul>
+{{else}}
+    <p>{{i18n "empty"}}</p>
+{{/if}}
